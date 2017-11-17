@@ -14,12 +14,14 @@ char *findpath(char *argv)
 	char *copy;
 	int i = 0;
 
-	while (environ != NULL)
+	while (environ[i] != NULL)
 	{
 		copy  = strdup(environ[i]);
 		token = strtok(copy, "=");
 		if (strcmp(token, keyword) == 0)
+		{
 			return (environ[i]);
+		}
 		i++;
 	}
 	return (NULL);
@@ -30,7 +32,8 @@ char *fix_token(char *argv, char *token)
 	char *new_token;
 	int i = 0, j = 0, total_strlen = 0;
 
-	total_strlen = strlen(argv) + strlen(token);
+	total_strlen = (strlen(argv)) + (strlen(token));
+	printf("string length- %d \n", total_strlen);
 	new_token = malloc(total_strlen * sizeof(char) + 2);
 	if (new_token == NULL)
 	{
@@ -45,10 +48,11 @@ char *fix_token(char *argv, char *token)
 	new_token[i] = '/';
 	while(argv[j] != '\0')
 	{
-		new_token[i] = argv[j];
+		new_token[i + 1] = argv[j];
 		j++;
+		i++;
 	}
-	new_token[i] = '\0';
+	new_token[i + 1] = '\0';
 	return(new_token);
 }
 
@@ -56,47 +60,22 @@ char *which(char *argv)
 {
 	char *dir;
 	char *token, *new_token, *holder_token;
-	pid_t child_pid;
 	struct stat st;
-	int new_dir, status;
+	int i = 0;
 
 	dir = findpath(argv);
 	dir = strdup(dir);
-	token = strtok(dir, ":");
-
-	while (token != NULL)
+	token = strtok(dir, "=:");
+	while (i < 10)
 	{
-		child_pid = fork();
-		if (child_pid < 0)
+		holder_token = token;
+		new_token = fix_token(argv, holder_token);
+		if(stat(new_token, &st) == 0)
 		{
-			perror("Error");
-			return (NULL);
+			return (new_token);
 		}
-		if (child_pid == 0)
-		{
-			holder_token = token;
-			new_token = fix_token(argv, holder_token);
-			new_dir = chdir(new_token);
-				if (new_dir == 0)
-				{
-					if(stat(argv, &st) == 0)
-						return (new_token);
-					else
-						continue;
-				}
-				else if (new_dir == -1)
-					continue;
-		}
-		if (child_pid > 0)
-		{
-			child_pid = wait(&status);
-			if (child_pid < 0)
-			{
-				perror("Error");
-				return (NULL);
-			}
-		}
-		token++;
+		i++;
+		token = strtok(NULL, "=:");
 	}
 	return (NULL);
 }
